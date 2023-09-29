@@ -1,0 +1,377 @@
+@model CustomerNoteSearchModel
+
+@{
+    //page title
+    ViewBag.PageTitle = T("Admin.Customers.CustomerNotes").Text;
+    //active menu item (system name)
+    NopHtml.SetActiveMenuItemSystemName("Customer notes");
+
+    const string hideSearchBlockAttributeName = "CustomerNotePage.HideSearchBlock";
+    var hideSearchBlock = await genericAttributeService.GetAttributeAsync<bool>(await workContext.GetCurrentCustomerAsync(), hideSearchBlockAttributeName);
+}
+
+<div class="content-header clearfix">
+    <h1 class="float-left">
+        @T("Admin.Customers.CustomerNotes")
+    </h1>
+</div>
+
+<section class="content">
+    <div class="container-fluid">
+        <div class="form-horizontal">
+            <div class="cards-group">
+                <div class="card card-default card-search">
+                    <div class="card-body">
+                        <div class="row search-row @(!hideSearchBlock ? "opened" : "")" data-hideAttribute="@hideSearchBlockAttributeName">
+                            <div class="search-text">@T("Admin.Common.Search")</div>
+                            <div class="icon-search"><i class="fas fa-search" aria-hidden="true"></i></div>
+                            <div class="icon-collapse"><i class="far fa-angle-@(!hideSearchBlock ? "up" : "down")" aria-hidden="true"></i></div>
+                        </div>
+                        <div class="search-body @(hideSearchBlock ? "closed" : "")">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group row">
+                                        <div class="col-md-4">
+                                            <nop-label asp-for="CustomerId" />
+                                            <span id="customer-check-progress" style="display: none; float: right; clear: both" class="please-wait">
+                                                @T("Common.Wait")
+                                            </span>
+                                        </div>
+                                        <div class="col-md-8">
+                                            <div class="input-group">
+                                                <input asp-for="CustomerId" type="hidden" />
+                                                <div class="form-text-row customer-names"></div>
+                                                <div class="input-group-append">
+                                                    <button type="submit" id="btnRefreshCustomer" style="display: none"></button>
+                                                    <script>
+                                                    $(document).ready(function () {
+                                                        $('#btnRefreshCustomer').click(function () {
+                                                            //refresh customer list
+                                                            loadCustomerName();
+
+                                                            //return false to don't reload a page
+                                                            return false;
+                                                        });
+                                                        loadCustomerName();
+                                                    });
+
+                                                    function loadCustomerName() {
+                                                        var inputValue = $('#@Html.IdFor(model => model.CustomerId)').val();
+                                                        if (inputValue) {
+                                                            //load friendly names
+                                                            $('#customer-check-progress').show();
+
+                                                            var postData = {
+                                                                customerId: inputValue
+                                                            };
+                                                            addAntiForgeryToken(postData);
+
+                                                            $.ajax({
+                                                                cache: false,
+                                                                type: "POST",
+                                                                url: "@Url.Action("LoadCustomerDetail", "Customer")",
+                                                                data: postData,
+                                                                dataType: "json",
+                                                                success: function (data, textStatus, jqXHR) {
+                                                                    var url = '@Url.Content("~/Admin/Customer/Edit/")' + inputValue;
+                                                                    $('.customer-names').html('<a href="' + url + '">' + data.Text + '</a>');
+                                                                },
+                                                                error: function (jqXHR, textStatus, errorThrown) {
+                                                                    $('.customer-names').text('');
+                                                                },
+                                                                complete: function (jqXHR, textStatus) {
+                                                                    $('#customer-check-progress').hide();
+                                                                }
+                                                            });
+                                                        } else {
+                                                            $('.customer-names').text('');
+                                                        }
+                                                    }
+                                                    </script>
+                                                    <button type="submit" id="btnChooseCustomer"
+                                                            onclick="javascript:OpenWindow('@(Url.Action("CustomerSearchPopup", "Customer", new {btnId = "btnRefreshCustomer", customerIdInput = "CustomerId"}))', 800, 850, true); return false;" class="btn btn-info">
+                                                        @T("Admin.Customers.Customers.Choose")
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group row">
+                                        <div class="col-md-4">
+                                            <nop-label asp-for="CreatedOnFrom" />
+                                        </div>
+                                        <div class="col-md-8">
+                                            <nop-editor asp-for="CreatedOnFrom" />
+                                        </div>
+                                    </div>
+                                    <div class="form-group row">
+                                        <div class="col-md-4">
+                                            <nop-label asp-for="CreatedOnTo" />
+                                        </div>
+                                        <div class="col-md-8">
+                                            <nop-editor asp-for="CreatedOnTo" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-8 offset-md-4">
+                                    <button type="button" id="search-customernotes" class="btn btn-primary btn-search">
+                                        <i class="fas fa-search"></i>
+                                        @T("Admin.Common.Search")
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card card-default">
+                    <div class="card-body">
+                        @await Html.PartialAsync("Table", new DataTablesModel
+                        {
+                            Name = "customernotes-grid",
+                            UrlRead = new DataUrl("CustomerNotesSelect", "Customer", null),
+                            UrlDelete = new DataUrl("CustomerNoteDelete", "Customer"),
+                            SearchButtonId = "search-customernotes",
+                            Length = Model.PageSize,
+                            LengthMenu = Model.AvailablePageSizes,
+                            Filters = new List<FilterParameter>
+                            {
+                                new FilterParameter(nameof(Model.CustomerId)),
+                                new FilterParameter(nameof(Model.CreatedOnFrom)),
+                                new FilterParameter(nameof(Model.CreatedOnTo)),
+                            },
+                            ColumnCollection = new List<ColumnProperty>
+                            {
+                                new ColumnProperty(nameof(CustomerNoteModel.Note))
+                                {
+                                    Title = T("Admin.Customers.CustomerNotes.Fields.Note").Text,
+                                    Encode = false
+                                },
+                                new ColumnProperty(nameof(CustomerNoteModel.DownloadId))
+                                {
+                                    Title = T("Admin.Customers.CustomerNotes.Fields.Download").Text,
+                                    Width = "200",
+                                    ClassName =  NopColumnClassDefaults.Button,
+                                    Render = new RenderCustom("renderColumnDownloadId")
+                                },
+                                new ColumnProperty(nameof(CustomerNoteModel.DisplayToCustomer))
+                                {
+                                    Title = T("Admin.Customers.CustomerNotes.Fields.DisplayToCustomer").Text,
+                                    Width = "150",
+                                    ClassName =  NopColumnClassDefaults.CenterAll,
+                                    Render = new RenderBoolean()
+                                },
+                                new ColumnProperty(nameof(CustomerNoteModel.AddedByAdmin))
+                                {
+                                    Title = T("Admin.Customers.CustomerNotes.Fields.AddedByAdmin").Text,
+                                    Width = "150",
+                                    ClassName =  NopColumnClassDefaults.CenterAll,
+                                    Render = new RenderBoolean()
+                                },
+                                new ColumnProperty(nameof(CustomerNoteModel.CreatedOn))
+                                {
+                                    Title = T("Admin.Customers.CustomerNotes.Fields.CreatedOn").Text,
+                                    Width = "200",
+                                    Render = new RenderDate()
+                                },
+                                new ColumnProperty(nameof(CustomerNoteModel.Id))
+                                {
+                                    Title = T("Admin.Common.Delete").Text,
+                                    Width = "100",
+                                    Render = new RenderButtonRemove(T("Admin.Common.Delete").Text),
+                                    ClassName =  NopColumnClassDefaults.Button
+                                }
+                            }
+                        })
+                        
+                        <script>
+                            function renderColumnDownloadId(data, type, row, meta) {
+                                return (row.DownloadId > 0) ? '<a class="btn btn-default" href="@Url.Content("~/Admin/Download/DownloadFile")?downloadGuid=' + row.DownloadGuid + '"><i class="fas fa-download"></i>@T("Admin.Customers.CustomerNotes.Fields.Download.Link").Text</a>' : '@T("Admin.Customers.CustomerNotes.Fields.Download.Link.No").Text';
+                            }
+                        </script>
+
+                    </div>
+                </div>
+                
+                <div class="card card-default">
+                    <script>
+                        $(document).ready(function () {
+                            $("#@Html.IdFor(model => model.CustomerNote.HasDownload)").change(toggleHasDownload);
+                            toggleHasDownload();
+                        });
+
+                        function toggleHasDownload() {
+                            if ($('#@Html.IdFor(model => model.CustomerNote.HasDownload)').is(':checked')) {
+                                $('#pnlDownloadId').showElement();
+                            }
+                            else {
+                                $('#pnlDownloadId').hideElement();
+                            }
+                        }
+                    </script>
+
+                    <div class="card-header">
+                        @T("Admin.Customers.CustomerNotes.AddTitle")
+                    </div>
+
+                    <div class="card-body">
+                        
+                        <div class="form-group row">
+                            <div class="col-md-3">
+                                <nop-label asp-for="CustomerNote.CustomerId" />
+                                <span id="customernote-check-progress" style="display: none; float: right; clear: both" class="please-wait">
+                                    @T("Common.Wait")
+                                </span>
+                            </div>
+                            <div class="col-md-9">
+                                <div class="input-group">
+                                    <input asp-for="CustomerNote.CustomerId" type="hidden" />
+                                    <div class="form-text-row customernote-names"></div>
+                                    <div class="input-group-append">
+                                        <button type="submit" id="btnRefreshCustomerNote" style="display: none"></button>
+                                        <script>
+                                        $(document).ready(function () {
+                                            $('#btnRefreshCustomerNote').click(function () {
+                                                //refresh customer list
+                                                loadCustomerNoteName();
+
+                                                //return false to don't reload a page
+                                                return false;
+                                            });
+                                            loadCustomerNoteName();
+                                        });
+
+                                        function loadCustomerNoteName() {
+                                            var inputValue = $('#@Html.IdFor(model => model.CustomerNote.CustomerId)').val();
+                                            if (inputValue) {
+                                                //load friendly names
+                                                $('#customernote-check-progress').show();
+
+                                                var postData = {
+                                                    customerId: inputValue
+                                                };
+                                                addAntiForgeryToken(postData);
+
+                                                $.ajax({
+                                                    cache: false,
+                                                    type: "POST",
+                                                    url: "@Url.Action("LoadCustomerDetail", "Customer")",
+                                                    data: postData,
+                                                    dataType: "json",
+                                                    success: function (data, textStatus, jqXHR) {
+                                                        var url = '@Url.Content("~/Admin/Customer/Edit/")' + inputValue;
+                                                        $('.customernote-names').html('<a href="' + url + '">' + data.Text + '</a>');
+                                                    },
+                                                    error: function (jqXHR, textStatus, errorThrown) {
+                                                        $('.customernote-names').text('');
+                                                    },
+                                                    complete: function (jqXHR, textStatus) {
+                                                        $('#customernote-check-progress').hide();
+                                                    }
+                                                });
+                                            } else {
+                                                $('.customernote-names').text('');
+                                            }
+                                        }
+                                        </script>
+                                        <button type="submit" id="btnChooseCustomerNote"
+                                                onclick="javascript:OpenWindow('@(Url.Action("CustomerSearchPopup", "Customer", new {btnId = "btnRefreshCustomerNote", customerIdInput = Html.IdFor(x => x.CustomerNote.CustomerId)}))', 800, 850, true); return false;" class="btn btn-info">
+                                            @T("Admin.Customers.Customers.Choose")
+                                        </button>
+                                    </div>
+                                </div>
+                                @Html.ValidationMessageFor(model => model.CustomerNote.CustomerId)
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <div class="col-md-3">
+                                <nop-label asp-for="CustomerNote.DisplayToCustomer" />
+                            </div>
+                            <div class="col-md-9">
+                                <nop-editor asp-for="CustomerNote.DisplayToCustomer" />
+                                <span asp-validation-for="CustomerNote.DisplayToCustomer"></span>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group row">
+                            <div class="col-md-3">
+                                <nop-label asp-for="CustomerNote.DownloadId" />
+                            </div>
+                            <div class="col-md-9">
+                                <div class="form-check">
+                                    <label class="form-check-label">
+                                        <input class="form-check-input" type="checkbox" asp-for="CustomerNote.HasDownload" />
+                                        @T("Admin.Customers.CustomerNotes.Fields.Download.HasDownload")
+                                    </label>
+                                </div>
+                                <div id="pnlDownloadId">
+                                    <nop-editor asp-for="CustomerNote.DownloadId" />
+                                    <span asp-validation-for="CustomerNote.DownloadId"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <div class="col-md-3">
+                                <nop-label asp-for="CustomerNote.Note" />
+                            </div>
+                            <div class="col-md-9">
+                                <nop-textarea asp-for="CustomerNote.Note" />
+                                <span asp-validation-for="CustomerNote.Note"></span>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <div class="col-md-9 offset-md-3">
+                                <button type="button" id="addCustomerNote" class="btn btn-primary">@T("Admin.Customers.CustomerNotes.AddButton")</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+    $(document).ready(function () {
+        $('#addCustomerNote').click(function() {
+            var customerId = $("#@Html.IdFor(model => model.CustomerNote.CustomerId)").val();
+            var note = $("#@Html.IdFor(model => model.CustomerNote.Note)").val();
+            var downloadId = 0;
+            if ($('#@Html.IdFor(model => model.CustomerNote.HasDownload)').is(':checked')) {
+                downloadId = $("#@Html.IdFor(model => model.CustomerNote.DownloadId)").val();
+            }
+            var displayToCustomer =
+                $("#@Html.IdFor(model => model.CustomerNote.DisplayToCustomer)").is(':checked');
+            $('#addCustomerNote').attr('disabled', true);
+
+            var postData = {
+                DisplayToCustomer: displayToCustomer,
+                message: note,
+                downloadId: downloadId,
+                customerId: customerId
+            };
+            addAntiForgeryToken(postData);
+
+            $.ajax({
+                cache: false,
+                type: "POST",
+                url: "@(Url.Action("CustomerNoteAdd", "Customer"))",
+                data: postData,
+                success: function (data, textStatus, jqXHR) {
+                    if (data.Result) {
+                        //reload grid
+                        updateTable('#customernotes-grid');
+                    } else {
+                        //display errors if returned
+                        display_nop_error(data);
+                    }
+                },
+               complete: function (jqXHR, textStatus) {
+                    $('#addCustomerNote').attr('disabled', false);
+                }
+            });
+        });
+    });
+</script>

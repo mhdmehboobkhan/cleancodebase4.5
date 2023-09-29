@@ -1,0 +1,89 @@
+﻿@model CustomerAddressSearchModel
+@{
+    Layout = "_ColumnsAdmin";
+
+    //title
+    ViewBag.PageTitle = T("Account.CustomerAddresses").Text;
+    //page class
+    NopHtml.AppendPageCssClassParts("html-account-page");
+    NopHtml.AppendPageCssClassParts("html-address-list-page");
+}
+@section left
+{
+    @await Component.InvokeAsync("CustomerNavigation", new { selectedTabId = CustomerNavigationEnum.Addresses })
+}
+<div class="content-header clearfix">
+    <h1 class="float-left">
+        @T("Account.MyAccount") - @T("Account.CustomerAddresses")
+    </h1>
+    <div class="float-right">
+        <button type="button" class="btn btn-primary" onclick="location.href = '@Url.RouteUrl("CustomerAddressAdd")'">
+            @T("Admin.Customers.Customers.Addresses.AddButton")
+        </button>
+    </div>
+</div>
+
+<section class="content">
+    <div class="container-fluid">
+        <div class="form-horizontal">
+            <div class="cards-group">
+                <div class="card card-secondary card-outline">
+                    <div class="card-body">
+                        <nop-antiforgery-token />
+                        @await Html.PartialAsync("Table", new DataTablesModel
+                        {
+                            Name = "customer-addresses-grid",
+                            UrlRead = new DataUrl("AddressesSelect", "Customer"),
+                            UrlDelete = new DataUrl("AddressDelete", "Customer"),
+                            Length = Model.PageSize,
+                            LengthMenu = Model.AvailablePageSizes,
+                            ColumnCollection = new List<ColumnProperty>
+                                {
+                                    new ColumnProperty(nameof(AddressModel.FirstName))
+                                    {
+                                        Title = T("Admin.Address.Fields.FirstName").Text
+                                    },
+                                    new ColumnProperty(nameof(AddressModel.LastName))
+                                    {
+                                        Title = T("Admin.Address.Fields.LastName").Text
+                                    },
+                                    new ColumnProperty(nameof(AddressModel.Email))
+                                    {
+                                        Title = T("Admin.Address.Fields.Email").Text
+                                    },
+                                    new ColumnProperty(nameof(AddressModel.PhoneNumber))
+                                    {
+                                        Title = T("Admin.Address.Fields.PhoneNumber").Text
+                                    },
+                                    new ColumnProperty(nameof(AddressModel.FaxNumber))
+                                    {
+                                        Title = T("Admin.Address.Fields.FaxNumber").Text
+                                    },
+                                    //new ColumnProperty(nameof(AddressModel.AddressHtml))
+                                    //{
+                                    //    Title = T("Admin.Address").Text,
+                                    //    Encode = false
+                                    //},
+                                    new ColumnProperty(nameof(AddressModel.Id))
+                                    {
+                                        Title = T("Admin.Common.Edit").Text,
+                                        Width = "100",
+                                        ClassName =  NopColumnClassDefaults.Button,
+                                        Render = new RenderButtonEdit(new DataUrl("~/customer/addressedit?addressid=", true))
+                                    },
+                                    new ColumnProperty(nameof(AddressModel.Id))
+                                    {
+                                        Title = T("Admin.Common.Delete").Text,
+                                        Width = "100",
+                                        Render = new RenderButtonRemove(T("Admin.Common.Delete").Text),
+                                        ClassName =  NopColumnClassDefaults.Button
+                                    }
+                                }
+                        })
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+</section>
+

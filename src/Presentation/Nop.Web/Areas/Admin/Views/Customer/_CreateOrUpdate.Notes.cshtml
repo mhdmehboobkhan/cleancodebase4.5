@@ -1,0 +1,160 @@
+@model CustomerModel
+
+<div class="card-body">
+    @await Html.PartialAsync("Table", new DataTablesModel
+    {
+        Name = "customernotes-grid",
+        UrlRead = new DataUrl("CustomerNotesSelect", "Customer", new RouteValueDictionary { [nameof(Model.CustomerNoteSearchModel.CustomerId)] = Model.CustomerNoteSearchModel.CustomerId }),
+        UrlDelete = new DataUrl("CustomerNoteDelete", "Customer"),
+        Length = Model.CustomerNoteSearchModel.PageSize,
+        LengthMenu = Model.CustomerNoteSearchModel.AvailablePageSizes,
+        ColumnCollection = new List<ColumnProperty>
+        {
+            new ColumnProperty(nameof(CustomerNoteModel.Note))
+            {
+                Title = T("Admin.Customers.CustomerNotes.Fields.Note").Text,
+                Encode = false
+            },
+            new ColumnProperty(nameof(CustomerNoteModel.DownloadId))
+            {
+                Title = T("Admin.Customers.CustomerNotes.Fields.Download").Text,
+                Width = "200",
+                ClassName =  NopColumnClassDefaults.Button,
+                Render = new RenderCustom("renderColumnDownloadId")
+            },
+            new ColumnProperty(nameof(CustomerNoteModel.DisplayToCustomer))
+            {
+                Title = T("Admin.Customers.CustomerNotes.Fields.DisplayToCustomer").Text,
+                Width = "150",
+                ClassName =  NopColumnClassDefaults.CenterAll,
+                Render = new RenderBoolean()
+            },
+            new ColumnProperty(nameof(CustomerNoteModel.CreatedOn))
+            {
+                Title = T("Admin.Customers.CustomerNotes.Fields.CreatedOn").Text,
+                Width = "200",
+                Render = new RenderDate()
+            },
+            new ColumnProperty(nameof(CustomerNoteModel.Id))
+            {
+                Title = T("Admin.Common.Delete").Text,
+                Width = "100",
+                Render = new RenderButtonRemove(T("Admin.Common.Delete").Text),
+                ClassName =  NopColumnClassDefaults.Button
+            }
+        }
+    })
+
+    <script>
+        function renderColumnDownloadId(data, type, row, meta) {
+            return (row.DownloadId > 0) ? '<a class="btn btn-default" href="@Url.Content("~/Admin/Download/DownloadFile")?downloadGuid=' + row.DownloadGuid + '"><i class="fas fa-download"></i>@T("Admin.Customers.CustomerNotes.Fields.Download.Link").Text</a>' : '@T("Admin.Customers.CustomerNotes.Fields.Download.Link.No").Text';
+        }
+    </script>
+
+    <div class="card card-default">
+        <script>
+            $(document).ready(function () {
+                $("#@Html.IdFor(model => model.AddCustomerNoteModel.HasDownload)").change(toggleHasDownload);
+                toggleHasDownload();
+            });
+
+            function toggleHasDownload() {
+                if ($('#@Html.IdFor(model => model.AddCustomerNoteModel.HasDownload)').is(':checked')) {
+                    $('#pnlDownloadId').showElement();
+                }
+                else {
+                    $('#pnlDownloadId').hideElement();
+                }
+            }
+        </script>
+
+        <div class="card-header">
+            @T("Admin.Customers.CustomerNotes.AddTitle")
+        </div>
+
+        <div class="card-body">
+            <div class="form-group row">
+                <div class="col-md-3">
+                    <nop-label asp-for="AddCustomerNoteModel.Note" />
+                </div>
+                <div class="col-md-9">
+                    <nop-textarea asp-for="AddCustomerNoteModel.Note" />
+                    <span asp-validation-for="AddCustomerNoteModel.Note"></span>
+                </div>
+            </div>
+            <div class="form-group row">
+                <div class="col-md-3">
+                    <nop-label asp-for="AddCustomerNoteModel.DownloadId" />
+                </div>
+                <div class="col-md-9">
+                    <div class="form-check">
+                        <label class="form-check-label">
+                            <input class="form-check-input" type="checkbox" asp-for="AddCustomerNoteModel.HasDownload" />
+                            @T("Admin.Customers.CustomerNotes.Fields.Download.HasDownload")
+                        </label>
+                    </div>
+                    <div id="pnlDownloadId">
+                        <nop-editor asp-for="AddCustomerNoteModel.DownloadId" />
+                        <span asp-validation-for="AddCustomerNoteModel.DownloadId"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group row">
+                <div class="col-md-3">
+                    <nop-label asp-for="AddCustomerNoteModel.DisplayToCustomer" />
+                </div>
+                <div class="col-md-9">
+                    <nop-editor asp-for="AddCustomerNoteModel.DisplayToCustomer" />
+                    <span asp-validation-for="AddCustomerNoteModel.DisplayToCustomer"></span>
+                </div>
+            </div>
+            <div class="form-group row">
+                <div class="col-md-9 offset-md-3">
+                    <button type="button" id="addCustomerNote" class="btn btn-primary">@T("Admin.Customers.CustomerNotes.AddButton")</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function () {
+        $('#addCustomerNote').click(function() {
+            var note = $("#@Html.IdFor(model => model.AddCustomerNoteModel.Note)").val();
+            var downloadId = 0;
+            if ($('#@Html.IdFor(model => model.AddCustomerNoteModel.HasDownload)').is(':checked')) {
+                downloadId = $("#@Html.IdFor(model => model.AddCustomerNoteModel.DownloadId)").val();
+            }
+            var displayToCustomer =
+                $("#@Html.IdFor(model => model.AddCustomerNoteModel.DisplayToCustomer)").is(':checked');
+            $('#addCustomerNote').attr('disabled', true);
+
+            var postData = {
+                DisplayToCustomer: displayToCustomer,
+                message: note,
+                downloadId: downloadId,
+                customerId: '@Model.Id'
+            };
+            addAntiForgeryToken(postData);
+
+            $.ajax({
+                cache: false,
+                type: "POST",
+                url: "@(Url.Action("CustomerNoteAdd", "Customer"))",
+                data: postData,
+                success: function (data, textStatus, jqXHR) {
+                    if (data.Result) {
+                        //reload grid
+                        updateTable('#customernotes-grid');
+                    } else {
+                        //display errors if returned
+                        display_nop_error(data);
+                    }
+                },
+               complete: function (jqXHR, textStatus) {
+                    $('#addCustomerNote').attr('disabled', false);
+                }
+            });
+        });
+    });
+</script>

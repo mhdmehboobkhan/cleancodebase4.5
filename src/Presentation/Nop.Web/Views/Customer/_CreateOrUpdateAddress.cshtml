@@ -1,0 +1,220 @@
+﻿@model AddressModel
+
+<script>
+    $(document).ready(function () {
+        $("#@Html.IdFor(model => model.CountryId)").change(function () {
+            var selectedItem = $(this).val();
+            var ddlStates = $("#@Html.IdFor(model => model.StateProvinceId)");
+            $.ajax({
+                cache: false,
+                type: "GET",
+                url: "@(Url.Action("GetStatesByCountryId", "Country"))",
+                data: {
+                    "countryId": selectedItem,
+                    "addSelectStateItem": "false"
+                },
+                success: function (data, textStatus, jqXHR) {
+                    ddlStates.html('');
+                    $.each(data,
+                        function (id, option) {
+                            ddlStates.append($('<option></option>').val(option.id).html(option.name));
+                        });
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    $("#statesAlert").click();
+                }
+            });
+        });
+    });
+</script>
+
+<input class="address-id" asp-for="Id" type="hidden" />
+<div class="form-group row">
+    <div class="col-md-3">
+        <nop-label asp-for="FirstName" asp-postfix=":" class="col-form-label"></nop-label>
+    </div>
+    <div class="col-md-6">
+        <nop-editor asp-for="FirstName" />
+        <nop-required />
+        <span asp-validation-for="FirstName"></span>
+    </div>
+</div>
+<div class="form-group row">
+    <div class="col-md-3">
+        <nop-label asp-for="LastName" asp-postfix=":" class="col-form-label"></nop-label>
+    </div>
+    <div class="col-md-6">
+        <nop-editor asp-for="LastName" />
+        <nop-required />
+        <span asp-validation-for="LastName"></span>
+    </div>
+</div>
+<div class="form-group row">
+    <div class="col-md-3">
+        <nop-label asp-for="Email" asp-postfix=":" class="col-form-label"></nop-label>
+    </div>
+    <div class="col-md-6">
+        <nop-editor asp-for="Email" />
+        <nop-required />
+        <span asp-validation-for="Email"></span>
+    </div>
+</div>
+@if (Model.CompanyEnabled)
+{
+    <div class="form-group row">
+        <div class="col-md-3">
+            <nop-label asp-for="Company" asp-postfix=":" class="col-form-label"></nop-label>
+        </div>
+        <div class="col-md-6">
+            <nop-editor asp-for="Company" />
+            @if (Model.CompanyRequired)
+            {
+                <nop-required />
+            }
+            <span asp-validation-for="Company"></span>
+        </div>
+    </div>
+}
+@if (Model.CountryEnabled)
+{
+    <div class="form-group row">
+        <div class="col-md-3">
+            <nop-label asp-for="CountryId" asp-postfix=":" class="col-form-label"></nop-label>
+        </div>
+        <div class="col-md-6">
+            <nop-select asp-for="CountryId" asp-items="Model.AvailableCountries" />
+            <nop-required />
+            <span asp-validation-for="CountryId"></span>
+        </div>
+    </div>
+}
+
+@if (Model.CountryEnabled && Model.StateProvinceEnabled)
+{
+    <div class="form-group row">
+        <div class="col-md-3">
+            <nop-label asp-for="StateProvinceId" asp-postfix=":" class="col-form-label"></nop-label>
+        </div>
+        <div class="col-md-6">
+            <nop-select asp-for="StateProvinceId" asp-items="Model.AvailableStates" />
+            <span id="states-loading-progress" style="display: none;" class="please-wait">@T("Common.Wait")</span>
+            <span asp-validation-for="StateProvinceId"></span>
+        </div>
+    </div>
+}
+@if (Model.CountyEnabled)
+{
+    <div class="form-group row">
+        <div class="col-md-3">
+            <nop-label asp-for="County" asp-postfix=":" class="col-form-label"></nop-label>
+        </div>
+        <div class="col-md-6">
+            <nop-editor asp-for="County" />
+            @if (Model.CountyRequired)
+            {
+                <nop-required />
+            }
+            <span asp-validation-for="County"></span>
+        </div>
+    </div>
+}
+@if (Model.CityEnabled)
+{
+    <div class="form-group row">
+        <div class="col-md-3">
+            <nop-label asp-for="City" asp-postfix=":" class="col-form-label"></nop-label>
+        </div>
+        <div class="col-md-6">
+            <nop-editor asp-for="City" />
+            @if (Model.CityRequired)
+            {
+                <nop-required />
+            }
+            <span asp-validation-for="City"></span>
+        </div>
+    </div>
+}
+@if (Model.StreetAddressEnabled)
+{
+    <div class="form-group row street-address">
+        <div class="col-md-3">
+            <nop-label asp-for="Address1" asp-postfix=":" class="col-form-label"></nop-label>
+        </div>
+        <div class="col-md-6">
+            <nop-editor asp-for="Address1" />
+            @if (Model.StreetAddressRequired)
+            {
+                <nop-required />
+            }
+            <span asp-validation-for="Address1"></span>
+        </div>
+    </div>
+}
+@if (Model.StreetAddress2Enabled)
+{
+    <div class="form-group row">
+        <div class="col-md-3">
+            <nop-label asp-for="Address2" asp-postfix=":" class="col-form-label"></nop-label>
+        </div>
+        <div class="col-md-6">
+            <nop-editor asp-for="Address2" />
+            @if (Model.StreetAddress2Required)
+            {
+                <nop-required />
+            }
+            <span asp-validation-for="Address2"></span>
+        </div>
+    </div>
+}
+@if (Model.ZipPostalCodeEnabled)
+{
+    <div class="form-group row">
+        <div class="col-md-3">
+            <nop-label asp-for="ZipPostalCode" asp-postfix=":" class="col-form-label"></nop-label>
+        </div>
+        <div class="col-md-6">
+            <nop-editor asp-for="ZipPostalCode" />
+            @if (Model.ZipPostalCodeRequired)
+            {
+                <nop-required />
+            }
+            <span asp-validation-for="ZipPostalCode"></span>
+        </div>
+    </div>
+}
+@if (Model.PhoneEnabled)
+{
+    <div class="form-group row">
+        <div class="col-md-3">
+            <nop-label asp-for="PhoneNumber" asp-postfix=":" class="col-form-label"></nop-label>
+        </div>
+        <div class="col-md-6">
+            <nop-editor asp-for="PhoneNumber" />
+            @if (Model.PhoneRequired)
+            {
+                <nop-required />
+            }
+            <span asp-validation-for="PhoneNumber"></span>
+        </div>
+    </div>
+}
+@if (Model.FaxEnabled)
+{
+    <div class="form-group row">
+        <div class="col-md-3">
+            <nop-label asp-for="FaxNumber" asp-postfix=":" class="col-form-label"></nop-label>
+        </div>
+        <div class="col-md-6">
+            <nop-editor asp-for="FaxNumber" />
+            @if (Model.FaxRequired)
+            {
+                <nop-required />
+            }
+            <span asp-validation-for="FaxNumber"></span>
+        </div>
+    </div>
+}
+@if (Model.CustomAddressAttributes.Count > 0)
+{
+    @await Html.PartialAsync("_AddressAttributes", Model.CustomAddressAttributes)
+}
